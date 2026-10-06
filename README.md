@@ -1,80 +1,70 @@
-# Trailer ID Scanner
+# YardScan — Trailer ID Scanner
 
-## Full-Stack Architecture
+YardScan is a simple local web app for yard managers, dispatchers, and drivers. It reads trailer IDs from a live camera, a photo, or recorded video, lets the operator correct the results, and exports the session as an Excel workbook or CSV file.
 
-- **Backend:** FastAPI (Python) for OCR, AI, and Excel export
-- **Frontend:** React.js (Create React App) for file upload, results display, and Excel download
+## What it does
 
-### Quickstart
+- Uses a phone or laptop camera to capture a trailer ID
+- Can auto-scan a live feed every four seconds
+- Accepts JPG, PNG, WebP, MP4, MOV, and WebM uploads
+- Samples recorded video and keeps each unique trailer ID
+- Shows OCR confidence and allows IDs and notes to be edited
+- Prevents duplicate IDs within a session
+- Saves the current session in the browser
+- Exports clean `.xlsx` and `.csv` logs with ID, time, source, confidence, and notes
 
-#### Backend (API)
-1. Install dependencies:
-   ```bash
-   pip install fastapi uvicorn easyocr opencv-python pandas openpyxl
-   ```
-2. Run the API:
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+All media is processed by the local FastAPI server. Temporary uploads are deleted as soon as processing finishes.
 
-#### Frontend (Web UI)
-1. Install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Start the React app:
-   ```bash
-   npm start
-   ```
+## Run locally
 
----
+Python 3.10+ and Node.js 18+ are recommended. EasyOCR downloads its English model the first time a scan is made.
 
-## Table of Contents
-- [Project Overview](#project-overview)
-- [Backend (FastAPI)](#backend-fastapi)
-- [Frontend (React)](#frontend-react)
-- [OCR/AI](#ocrai)
-- [Excel Export](#excel-export)
-- [How to Run](#how-to-run)
-- [License](#license)
+### 1. Start the API
 
-This project provides a simple Python script to extract trailer ID numbers from images using Optical Character Recognition (OCR).
-
-## Features
-- Uses Tesseract OCR to detect and extract text from images of trailers.
-- Includes image preprocessing (grayscale, thresholding) for improved accuracy.
-- Works with common image formats (PNG, JPG, etc.).
-
-## Requirements
-- Python 3.7+
-- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (must be installed and available in your system PATH)
-- Python packages: `pytesseract`, `Pillow`, `opencv-python`, `numpy`
-
-Install Python dependencies with:
-```
-pip install pytesseract pillow opencv-python numpy
+```bash
+# --clear also repairs an older or partially installed local environment
+python3 -m venv --clear .venv
+source .venv/bin/activate
+python -m pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload
 ```
 
-## Usage
-1. Place your trailer image in the `pictures/` directory.
-2. Update the `image_path` variable in `testOCR.py` to point to your image file (e.g., `pictures/trailerid1.png`).
-3. Run the script:
-   ```
-   python testOCR.py
-   ```
-4. The script will preprocess the image, perform OCR, and print the detected text (trailer ID) to the console.
+The API will run at `http://localhost:8000`. Its interactive documentation is at `http://localhost:8000/docs`.
 
-## Notes
-- For best results, use clear, high-contrast images with the trailer ID upright and unobstructed.
-- You can adjust preprocessing parameters in `testOCR.py` for different image conditions.
+### 2. Start the UI
 
----
+In a second terminal:
 
-**Example output:**
+```bash
+cd frontend
+npm install
+npm run dev
 ```
-Detected Text:
-LR7634
+
+Open the URL printed by Vite, normally `http://localhost:5173`. Camera access works on localhost. On a deployed phone-facing site, HTTPS is required by modern browsers.
+
+To point the UI at a different API address, create `frontend/.env.local`:
+
+```text
+VITE_API_URL=https://your-api.example.com
 ```
-**Goal**
-Excel file with all trailer id's in each cell where user can edit logistics after downloading. 
+
+## Tests and production build
+
+```bash
+python -m unittest backend.test_main
+cd frontend
+npm test
+npm run build
+```
+
+## API overview
+
+- `GET /api/health` — service status
+- `POST /api/scan/image` — OCR for one image or camera frame
+- `POST /api/scan/video` — sampled OCR for a recorded video
+- `POST /api/export?format=xlsx|csv` — spreadsheet generation from reviewed records
+
+## Scanning tips
+
+Fill the frame with the printed ID, hold the camera steady, and avoid glare or deep shadow. OCR can make mistakes on dirty or damaged labels, so review the editable session table before export.
